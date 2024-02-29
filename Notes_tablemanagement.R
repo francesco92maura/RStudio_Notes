@@ -24,3 +24,25 @@ View(t1)
 t1 <- sw_dt[order(-height) & sex == "female"]
 View(t1)
 
+
+# manipulating columns
+dt <- data.table(x = 1:4)
+dt[, x_sq := x^2][]
+dt_copy = dt
+dt_copy[, x_sq := NULL][]
+dt # attention! modifying the copy we modify also the original
+# use the "copy" function
+dt[, x_sq := x^2][]
+dt_copy = copy(dt)
+dt_copy[, ':=' (x_sq = NULL, x2 = x*2)][] # manipulating multiple columns
+dt # original data not modified
+dt_copy[, x_cube := x^3][, y := (x^2-3)][] # multiple columns manipulation
+# multiple column manipulation with "magrittr" pipe
+library(magrittr)
+dt_copy %>% 
+  .[, x_cube := NULL] %>%
+  .[, y2 := y*0.5] %>%
+  .[]
+
+
+

@@ -65,7 +65,17 @@ setnames(sw_dt, old = c("alias", "crib"), new = c("name", "homeworld"))[]
 sw_dt[1:2, .(name1 = name, planet = homeworld)]
 View(sw_dt)
 
+# Aggregating manipulations
+sw_dt[, mean(height, na.rm = T), by = gender][]
+sw_dt[, avg_h := mean(height, na.rm = T)] %>%
+      .[1:5, .(name, height, avg_h)]
+sw_dt[, avg_h := mean(height, na.rm = T), by = species] %>%
+  .[1:5, .(name, height, avg_h)]
+sw_dt[, avg_h := mean(height, na.rm = T), by = gender] %>%
+  .[1:5, .(name, height, avg_h)]
 
-
-
+# counting
+sw_dt[, .N]
+t1[, .N]
+sw_dt[, .N, by = species]
 

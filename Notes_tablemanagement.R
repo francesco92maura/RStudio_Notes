@@ -44,5 +44,28 @@ dt_copy %>%
   .[, y2 := y*0.5] %>%
   .[]
 
+# Subsetting on columns by:
+# column postion
+t1 <- sw_dt[1:4, c(1:3, 7, 10)][]
+t1
+# column name (all the 3 lines do the same thing)
+t1 <- sw_dt[1:4, c("name", "height", "mass", "species", "homeworld")][]
+t1 <- sw_dt[1:4, list(name, height, mass, species, homeworld)][]
+t1 <- sw_dt[1:4, .(name, height, mass, species, homeworld)][]
+t1
+# subsetting by excluding columns
+t1 <- sw_dt[1:4, !c("name", "height", "mass", "species", "homeworld")][]
+t1 # all col but the 5 listed
+
+# Renaming columns
+setnames(sw_dt, old = c("name", "homeworld"), new = c("alias", "crib"))[]
+# set names back
+setnames(sw_dt, old = c("alias", "crib"), new = c("name", "homeworld"))[]
+
+sw_dt[1:2, .(name1 = name, planet = homeworld)]
+View(sw_dt)
+
+
+
 
 

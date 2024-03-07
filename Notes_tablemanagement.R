@@ -24,7 +24,6 @@ View(t1)
 t1 <- sw_dt[order(-height) & sex == "female"]
 View(t1)
 
-
 # manipulating columns
 dt <- data.table(x = 1:4)
 dt[, x_sq := x^2][]
@@ -78,4 +77,26 @@ sw_dt[, avg_h := mean(height, na.rm = T), by = gender] %>%
 sw_dt[, .N]
 t1[, .N]
 sw_dt[, .N, by = species]
+
+# Group by
+sw_dt[, mean(height, na.rm = T), by = species][] # average height by species
+sw_dt[, .(avg_h = mean(height, na.rm = T)), by = species][] # add the new variable to the data.table
+sw_dt[, mean(mass, na.rm = T), by = height>180][]
+
+# multiple "by" group: .() operator
+sw_dt[, .(avg_h = mean(height, na.rm = T)), by = .(species, homeworld)][]
+sw_dt[order(species), .(avg_h = mean(height, na.rm = T)), by = .(species, homeworld)][]
+
+# multiple grouping with .SD command
+sw_dt[, .(mean(height, na.rm=T), mean(mass, na.rm=T), mean(birth_year, na.rm=T)),
+      by = species][]
+# is it possible to do it in a more aggregate made? Yes!
+sw_dt[,
+      lapply(.SD, mean, na.rm=T),
+      .SDcols = c("height", "mass", "birth_year"), by = species][] %>%
+      head(5)
+
+
+
+
 

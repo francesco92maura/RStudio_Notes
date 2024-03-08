@@ -95,7 +95,23 @@ sw_dt[,
       lapply(.SD, mean, na.rm=T),
       .SDcols = c("height", "mass", "birth_year"), by = species][] %>%
       head(5)
+# keyby: works exactly as "by", but also generate a key (ID?)
+t1 <- sw_dt[, lapply(.SD, mean, na.rm=T),
+            .SDcols = c("height", "mass"), keyby = species] 
+t1 %>% head(6)
 
+#----- keys -----#
+# what is a key? is similar to an Identifier, but for groups, not individuals. 
+# thus, if I have to subset based on a key, the operation are much faster
+
+# how to set a key
+dt <- data.table(x = 1:15, y = LETTERS[1:15], key = "x")
+key(dt)
+dt <- as.data.table(sw_dt, key = "species")
+key(dt)
+t1 <- sw_dt
+setDT(t1, key = "species")
+key(t1)
 
 
 

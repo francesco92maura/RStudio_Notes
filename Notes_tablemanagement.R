@@ -7,6 +7,7 @@ library(dplyr)
 
 # 1) BASICS of data.table #
 sw_dt <- as.data.table(starwars)
+# compute the average height by gender of only "Human" charachters
 t1 <- sw_dt[species=="Human", mean(height, na.rm = T), by = gender]
 View(t1)
 
@@ -21,6 +22,7 @@ t1 <- sw_dt[order(height)]
 View(t1)
 t1 <- sw_dt[order(-height)]
 View(t1)
+# ordering and filtering
 t1 <- sw_dt[order(-height) & sex == "female"]
 View(t1)
 
@@ -44,7 +46,7 @@ dt_copy %>%
   .[]
 
 # Subsetting on columns by:
-# column postion
+# row number, column postion
 t1 <- sw_dt[1:4, c(1:3, 7, 10)][]
 t1
 # column name (all the 3 lines do the same thing)
@@ -81,7 +83,7 @@ sw_dt[, .N, by = species]
 # Group by
 sw_dt[, mean(height, na.rm = T), by = species][] # average height by species
 sw_dt[, .(avg_h = mean(height, na.rm = T)), by = species][] # add the new variable to the data.table
-sw_dt[, mean(mass, na.rm = T), by = height>180][]
+sw_dt[, median(mass, na.rm = T), by = height>180][]
 
 # multiple "by" group: .() operator
 sw_dt[, .(avg_h = mean(height, na.rm = T)), by = .(species, homeworld)][]
@@ -103,16 +105,35 @@ t1 %>% head(6)
 #----- keys -----#
 # what is a key? is similar to an Identifier, but for groups, not individuals. 
 # thus, if I have to subset based on a key, the operation are much faster
+# Think of the way a filing cabinet might divide items by alphabetical order: 
+# Files starting "ABC" in the top drawer, "DEF" in the second drawer, etc. 
+# To find "Alice"'s file, you'd only have to search the top draw, and so on
 
 # how to set a key
 dt <- data.table(x = 1:15, y = LETTERS[1:15], key = "x")
-key(dt)
-dt <- as.data.table(sw_dt, key = "species")
-key(dt)
+key(dt) # which is the "key" variable in the data.table?
+
 t1 <- sw_dt
 setDT(t1, key = "species")
 key(t1)
 
+setkey(sw_dt, homeworld)
+key(sw_dt)#note: here we do not need quotes
 
+# setting multiple keys
+setkey(sw_dt, species, homeworld)
+key(sw_dt)
 
+# keys and performance
+# first: create a keyed version of the "storm" data.table
+# note that the "key" variables match the "by" grouping variables below.
+storms_dt_key = as.data.table(storms, key = c("name", "year", "month", "day"))
+# Collapse function for this keyed data.table. Everything else stays the same.
+collapse_dt_key = function() {
+  storms_dt_key[, .(wind = mean(wind), pressure = mean(pressure), category = first(category)),
+                                                              by = .(name, year, month, day)]
+}
+# Run the benchmark on all three functions
+library(microbenchmark)
+microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dt_key(), times = 1)
 

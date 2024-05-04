@@ -137,3 +137,35 @@ collapse_dt_key = function() {
 library(microbenchmark)
 microbenchmark(collapse_dplyr(), collapse_dt(), collapse_dt_key(), times = 1)
 
+# merging tables
+library(nycflights13) 
+flights_dt = as.data.table(flights)
+planes_dt = as.data.table(planes)
+new_air <- merge(planes_dt, flights_dt, by = "tailnum", all.x = T)
+# note: in this merge there is a werid double variable "year"
+new_air <- merge(flights_dt,
+                 setnames(planes_dt, old = "year", new = "year_built"),
+                 all.x = T, by = "tailnum")
+
+# reshaping data (wide and long)
+# melt(): wide to long
+# dcast(): long to wide
+
+# generate fake stock data
+stocks <- data.table(time = as.Date('2009-01-01') + 0:1,
+                    X = rnorm(2, 0, 1),
+                    Y = rnorm(2, 0, 2),
+                    Z = rnorm(2, 0, 4))
+stocks
+# from wide to long
+stocks_long <- melt(stocks, id.vars = "time",
+                    variable.name = "stock", value.name = "price")
+stocks_long
+# from long to wide
+dcast(stocks_long, time ~ stock, value.var = "price")
+
+
+# Additional note: tidyverse vs data.table
+# Interesting: tidy + data.table speed? Look at "dtplyr" package and website
+
+

@@ -51,3 +51,13 @@ pre_iaaf <-
   clean_names() %>% ## fix the column names
   mutate(date = mdy(date)) ## convert string to date format
 pre_iaaf
+
+# Aside: Get CSS selectors via browser inspection tools SelectorGadget is a great tool. But it isn’t available on all
+# browsers and can involve more work than I’d like sometimes, with all that iterative clicking.3 I therefore wanted to mention
+# an alternative (and very precise) approach to obtaining CSS selectors: Use the “inspect web element” feature of your
+# browser. (https://www.thoughtco.com/get-inspect-element-tool-for-browser-756549)
+
+# Here’s a quick example using Google Chrome. First, I open up the inspect console (Ctrl+Shift+I, or right-click and choose
+# “Inspect”). I then proceed to scroll over the source elements, until Chrome highlights the table of interest on the actual
+# page. Once the table (or other element of interest) is highlighted, I can grab its CSS by right-clicking and selecting Copy
+# -> Copy selector.

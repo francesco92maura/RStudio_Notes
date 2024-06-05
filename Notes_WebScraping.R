@@ -108,3 +108,17 @@ wr100 %>%
     caption = "Source: Wikipedia"
   ) +
   theme(legend.title = element_blank()) ## Switch off legend title
+
+# GOOD, you did it!
+# that wikipedia page was a good starting point, as the information we were interested
+# in were already in a table, so we can use htl_table() function.
+# But WHAT IF we don't want to scrape tables?
+
+# First: read the html
+base_url <- "https://www.amazon.it/s?k=spugne+cucina&crid=1DOYUJJU6O97J&sprefix=spugne%2Caps%2C88&ref=nb_sb_ss_ts-doa-p_1_6"
+amazon <- read_html(base_url)
+spugnette <-  craiglist %>%  html_elements("#anonCarousel1 .a-size-base.s-underline-text , .aok-align-bottom , .a-color-secondary .a-text-price span")
+spugnette
+
+spugnette <- html_text(spugnette) ## parse as text
+head(spugnette, 20) ## show the first 20 entries

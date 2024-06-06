@@ -99,6 +99,7 @@ wr100
 
 library(ggplot2)
 library(tidyverse)
+library(data.table)
 wr100 %>%
   ggplot(aes(x=date, y=time, col=fct_reorder2(era, date, time))) +
   geom_point(alpha = 0.7) +
@@ -115,10 +116,53 @@ wr100 %>%
 # But WHAT IF we don't want to scrape tables?
 
 # First: read the html
-base_url <- "https://www.amazon.it/s?k=spugne+cucina&crid=1DOYUJJU6O97J&sprefix=spugne%2Caps%2C88&ref=nb_sb_ss_ts-doa-p_1_6"
-amazon <- read_html(base_url)
-spugnette <-  craiglist %>%  html_elements("#anonCarousel1 .a-size-base.s-underline-text , .aok-align-bottom , .a-color-secondary .a-text-price span")
-spugnette
+base_url <- "https://www.ebay.it/sch/i.html?_from=R40&_trksid=m570.l2632&_nkw=splitboard&_sacat=112634"
+ebayit <- read_html(base_url)
+splitboard <- ebayit %>%  html_elements(".s-item__price , .s-item__subtitle , .s-item__title span")
+splitboard
 
-spugnette <- html_text(spugnette) ## parse as text
-head(spugnette, 20) ## show the first 20 entries
+splitboard <- html_text(splitboard) ## parse as text
+head(splitboard, 20) ## show the first 20 entries
+
+# coercing data frame #
+# The general approach that we want to adopt is to look for some kind of “quasi-regular”
+# structure that we can exploit
+splitboard <- splitboard[7:length(splitboard)] # first 7 elements are noise info
+head(splitboard, 10)   # looks we have 3 info for each products: name, 1st or 2nd hand, price
+head(as.data.frame(t(matrix(splitboard, nrow = 3))))
+tt <- as.data.frame(t(matrix(splitboard, nrow = 3)))
+# This approach isn’t going to work because not every sale item lists all 3 text fields. Quite a few are missing something
+# sometimes there is this "NUOVA INSERIZIONE" before the title. Try with the following selection
+base_url <- "https://www.ebay.it/sch/i.html?_from=R40&_trksid=m570.l2632&_nkw=splitboard&_sacat=112634"
+ebayit <- read_html(base_url)
+splitboard <- ebayit %>%  html_elements(".s-item__title > span , .s-item__price , .s-item__subtitle")
+splitboard
+
+splitboard <- html_text(splitboard) ## parse as text
+head(splitboard, 20) ## show the first 20 entries
+
+splitboard <- splitboard[7:length(splitboard)] # first 7 elements are noise info
+head(splitboard, 10)   # looks we have 3 info for each products: name, 1st or 2nd hand, price
+head(as.data.frame(t(matrix(splitboard, nrow = 3)))) 
+# good, it works!
+splitboard_dt <- as.data.table(t(matrix(splitboard, nrow = 3)))
+names(splitboard_dt) = c('name', 'hand', 'price')
+splitboard_dt[, ':=' (price = gsub(",",".",price))]
+splitboard_dt[, ':=' (price = as.numeric(gsub("\\b*EUR\\b*","",price)))]
+
+splitboard_dt <- as.data.frame(t(matrix(splitboard, nrow = 3)))
+names(splitboard_dt) = c('name', 'hand', 'price')
+splitboard_dt <- splitboard_dt %>% mutate(price = gsub(",",".",price))
+splitboard_dt <- splitboard_dt %>% mutate(price_n <- as.numeric(gsub('\\b*EUR\\b*','',price)))
+names(splitboard_dt) = c('name', 'hand', 'currency', 'price')
+
+
+
+# Web content can be rendered either 1) server-side or 2) client-side.
+# To scrape web content that is rendered server-side, we need to know the relevant CSS selectors.
+# We can find these CSS selectors using SelectorGadget or, more precisely, by inspecting the element in our browser.
+# We use the rvest package to read into the HTML document into R and then parse the relevant nodes.
+# – A typical workflow is: read_html(URL) %>% html_elements(CSS_SELECTORS) %>% html_table().
+# – You might need other functions depending on the content type (e.g. html_text).
+# Just because you can scrape something doesn’t mean you should (i.e. ethical and possibly legal considerations).
+# Webscraping involves as much art as it does science. Be prepared to do a lot of experimenting and data cleaning.

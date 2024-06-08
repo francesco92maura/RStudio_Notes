@@ -67,3 +67,6 @@ nyc_trees %>%
     title = "Sample of New York City trees",
     caption = "Source: NYC Open Data"
   )
+
+# I want to remind you that our first application didn’t require prior registration
+# on the Open Data NYC website, or creation of an API key. This is ATYPICAL

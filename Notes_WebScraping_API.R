@@ -9,7 +9,7 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(tidyverse, httr, lubridate, hrbrthemes, janitor, jsonlite, fredr,
                listviewer, usethis)
 ## My preferred ggplot2 plotting theme (optional)
-theme_set(hrbrthemes::theme_ipsum())
+# theme_set(hrbrthemes::theme_ipsum())
 
 #define vector of packages to load
 some_packages <- c('jsonlite', 'httr', 'listviewer', 'usethis', 'fredr', 'tidyverse', 'lubridate', 'hrbrthemes', 'janitor')
@@ -18,7 +18,7 @@ lapply(some_packages, library, character.only=TRUE)
 
 # Scraping web data that is rendered CLIENT-SIDE. The good news is that, when
 # available, this approach typically makes it much easier to scrape data from the web. The downside is that, again, it can
-# involve as much art as it does science. Moreover, as I emphasised last time, just because because we can scrape data,
+# involve as much art as it does science. Moreover, just because because we can scrape data,
 # doesn’t mean that we should
 
 # API (or Application Program Interface): is the process of accessing an URL, sending the
@@ -51,14 +51,19 @@ nyc_trees <- fromJSON("https://data.cityofnewyork.us/resource/uvpi-gqnh.json") %
   as_tibble()
 nyc_trees
 
-# to read in only the first five rows, you could use:
-## (Not run)
-fromJSON("https://data.cityofnewyork.us/resource/uvpi-gqnh.json?$limit=5")
+# Aside on limits: Note that the full census dataset contains nearly 700,000 individual trees. However, we only downloaded
+# a tiny sample of that, since the API defaults to a limit of 1,000 rows. I don’t care to access the full dataset here, since I just
+# want to illustrate some basic concepts. Nonetheless, if you were so inclined and read the docs, you’d see that you can
+# override this default by adding ?$limit=LIMIT to the API endpoint. For example, to read in only the first five rows, you
+# could use:
+## (Not run) ##
+# fromJSON("https://data.cityofnewyork.us/resource/uvpi-gqnh.json?$limit=5")
 
 # plot (just to see that what we have done is working and not useless)
+# note that the JSON package import everithing as text, thus we should convert numbers
 nyc_trees %>%
   select(longitude, latitude, stump_diam, spc_common, spc_latin, tree_id) %>%
-  mutate_at(vars(longitude:stump_diam), as.numeric) %>%
+  mutate_at(vars(longitude:stump_diam), as.numeric) %>%  # convert to numeric
   ggplot(aes(x=longitude, y=latitude, size=stump_diam)) +
   geom_point(alpha=0.5) +
   scale_size_continuous(name = "Stump diameter") +
@@ -70,3 +75,40 @@ nyc_trees %>%
 
 # I want to remind you that our first application didn’t require prior registration
 # on the Open Data NYC website, or creation of an API key. This is ATYPICAL
+
+
+# Application 2: FRED data
+
+# Do it yourself
+# As with all APIs, a good place to start is the FRED API developer docs. If you read through these, you’d see that the endpoint
+# path we’re interested in is series/observations. This endpoint “gets the observations or data values for an economic data
+# series”. The endpoint documentation gives a more in-depth discussion, including the various parameters that it accepts.3
+# However, the parameters that we’ll be focused on here are simply:
+#   • file_type: “json” (Not required, but our preferred type of output.)
+#   • series_id: “GNPCA” (Required. The data series that we want.)
+#   • api_key: “YOUR_API_KEY” (Required. Go and fetch/copy your key now.)
+
+# Go to: https://api.stlouisfed.org/fred/series/observations?series_id=GNPCA&api_key=41be5e4aa36e1ebb8224459c17afac6a&file_type=json
+# Note: your API key is 41be5e4aa36e1ebb8224459c17afac6
+
+# At this point you’re probably tempted to read the JSON object directly into your R environment using the jsonlite::
+# readJSON() function. And this will work. However, that’s not what we’re going to here. Rather, we’re going to
+# go through the httr package (link). Why? Well, basically because httr comes with a variety of features that allow us to
+# interact more flexibly and securely with web APIs.
+
+# define "endpoint" and "parameters", to be used more later
+endpoint = "series/observations"
+params = list(
+  api_key= "41be5e4aa36e1ebb8224459c17afac6", ## Change to your own key
+  file_type="json",
+  series_id="GNPCA"
+)
+
+
+
+
+
+
+
+
+

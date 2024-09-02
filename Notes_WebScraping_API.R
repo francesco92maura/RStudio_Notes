@@ -97,13 +97,66 @@ nyc_trees %>%
 # interact more flexibly and securely with web APIs.
 
 # define "endpoint" and "parameters", to be used more later
-endpoint = "series/observations"
+endpoint <- "series/observations"
 params = list(
-  api_key= "41be5e4aa36e1ebb8224459c17afac6", ## Change to your own key
-  file_type="json",
-  series_id="GNPCA"
+  series_id = "GNPCA",
+  api_key = "e38117fdeb141bf80af8b4bae49a7d07", ## Change to your own key
+  file_type = "json"
 )
 
+# Next, we’ll use the httr::GET() function to request (i.e. download) the data. I’ll assign this to an object called fred
+# library(httr) ## Already loaded above
+fred <-
+  httr::GET(
+    url = "https://api.stlouisfed.org/", ## Base URL
+    path = paste0("fred/", endpoint),    ## The API endpoint
+    query = params                       ## Our parameter list
+  )
+
+# Take a second to print the fred object in your console. 
+# What you’ll see is pretty cool; i.e. it’s the actual API response,
+# including the Status Code and Content. Something like:
+fred
+
+fred_content = fred
+# now we extract content from the "fred" element
+fred_content =
+  fred_content %>%
+  httr::content("text") %>% ## Extract the reponse content (i.e. text)
+  jsonlite::fromJSON() ## Convert from JSON to R object
+## What type of object did we get?
+typeof(fred_content)
+View(fred_content)
+# library(listviewer) ## Already loaded
+jsonedit(fred_content, mode = "view") ## Better for RMarkdown documents
+
+# Luckily, this particular list object isn’t too complicated. We can see that what we’re really interested in, is the
+# fred$observations sub-element.
+
+fred_content =
+  fred_content %>%
+  purrr::pluck("observations") %>% ## Extract the "$observations" list element
+  # .$observations %>% ## I could also have used this
+  # magrittr::extract("observations") %>% ## Or this
+  as_tibble() ## Just for nice formatting
+fred_content
+
+# We should convert from charavters to number, as JSON import everithing as character
+# library(lubridate) ## Already loaded above
+fred_content =
+  fred_content %>%
+  mutate(across(realtime_start:date, ymd)) %>%
+  mutate(value = as.numeric(value))
+
+# Now finally plot!
+fred_content %>%
+  ggplot(aes(date, value)) +
+  geom_line() +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    x="Date", y="2012 USD (Billions)",
+    title="US Real Gross National Product", caption="Source: FRED"
+  )
 
 
 

@@ -158,6 +158,170 @@ fred_content %>%
     title="US Real Gross National Product", caption="Source: FRED"
   )
 
+# Aside: Safely store and use API keys as environment variables ####
+
+# In the above example, I assumed that you would just replace the “YOUR_FRED_KEY” holder text with your actual API
+# key. This is obviously not very secure or scalable, since it means that you can’t share your R script without giving away
+# your key.
+# Solution: ENVIRONMENT VARIABLES
+
+### 1) Set an environment variable for the current R session only 
+# Set new environment variable called MY_API_KEY. Current session only.
+Sys.setenv(MY_API_KEY="e38117fdeb141bf80af8b4bae49a7d07") 
+## Assign the environment variable to an R object
+my_api_key = Sys.getenv("MY_API_KEY")
+## Print it out just to show that it worked
+my_api_key
+
+# Important: While this approach is very simple, note that in practice the Sys.setenv() part should only be run directly
+# in your R console. Never include code chunks with sensitive Sys.setenv() calls in an R Markdown file or other shared
+# documents.
+
+### 2) Set an environment variable that persist across R sessions
+
+# The trick to setting an R environment variable that is
+# available across sessions is to add it to a special file called ~/.Renviron. This is a text file that lives on your home directory
+# — note the ~/ path — which R automatically reads upon startup. Because ~/.Renviron is just a text file, you can edit it
+# with whatever is your preferred text editor. However, you may need to create it first if it doesn’t exist. A convenient way
+# to do all of this from RStudio is with the usethis::edit_r_environ() function. You will need to run the next few lines
+# interactively:
+
+## Open your .Renviron file. Here we can add API keys that persist across R sessions.
+usethis::edit_r_environ()
+
+# Once you have saved your changes, you’ll need to refresh so that this new environment variable is available in the current
+# session. You could also restart R, but that’s overkill
+
+## Optional: Refresh your .Renviron file.
+readRenviron("~/.Renviron") ## Only necessary if you are reading in a newly added R environment variable
+
+params = list(
+  api_key= Sys.getenv("FRED_API_KEY"), ## Get API directly and safely from the stored environment variable
+  file_type="json",
+  series_id="GNPCA"
+)
+fred <-
+  httr::GET(
+    url = "https://api.stlouisfed.org/", ## Base URL
+    path = paste0("fred/", endpoint),    ## The API endpoint
+    query = params                       ## Our parameter list
+  )
+
+# Take a second to print the fred object in your console. 
+# What you’ll see is pretty cool; i.e. it’s the actual API response,
+# including the Status Code and Content. Something like:
+fred
+
+
+### Application 3: World Rugby rankings ###
+
+# Locating the hidden API endpoint
+# Fortunately, there’s a better way: Access the full database of rankings through the API.
+# First we have to find the endpoint, though. 
+# Here’s a step-by-step guide of how to that that. It’s fairly tedious, but pretty intuitive once you get the hang of it.
+
+# • Start by inspecting the page. (Ctr+Shift+I in Chrome. Ctrl+Shift+Q in Firefox.)
+# • Head to the Network tab at the top of the inspect element panel.
+# • Click on the XHR button.10
+# • Refresh the page (Ctrl+R). This will allow us to see all the web traffic coming to and from the page in our inspect
+# panel.
+# • Our task now is to scroll these different traffic links and see which one contains the information that we’re after.
+# • The top traffic link item references a URL called https://api.wr-rims-prod.pulselive.com/rugby/v3/rankings/wru?language=en.
+# Hmmm. “API” you say? “Rankings” you say? Sounds promising…
+# • Click on this item and open up the Preview tab.
+# • In this case, we can see what looks to be the first row of the rankings table (“New Zealand”, etc.)
+# • To make sure, you can grab that https://api.wr-rims-prod.pulselive.com/rugby/v3/rankings/wru?language=en,
+# and paste it into our browser (using the JSONView plugin) from before.
+
+# Pulling data into R
+
+endpoint = "https://api.wr-rims-prod.pulselive.com/rugby/v3/rankings/wru?language=en"
+rugby = fromJSON(endpoint)
+str(rugby)
+
+# listviewer::jsonedit(rugby, mode = "view")
+head(rugby$entries$team)
+
+# It looks like we can just bind the columns of the rugby$entries$team
+# data frame directly to the other elements of the parent $team “data frame” (actually: “list”). Let’s do that using
+# dplyr::bind_cols() and then clean things up a bit. I’m going to call the resulting data frame rankings.
+
+rankings =
+  bind_cols(
+    rugby$entries$team,
+    rugby$entries %>% select(pts:previousPos)
+  ) %>%
+  clean_names() %>%
+  select(-c(id, alt_id, annotations)) %>% ## These columns aren't adding much of interest
+  select(pos, pts, everything()) %>% ## Reorder remaining columns
+  as_tibble() ## "Enhanced" tidyverse version of a data frame
+rankings
+
+### BONUS: Get and plot the rankings history ###
+
+## We'll look at rankings around Jan 1st each year. I'll use 2005 as an
+## arbitrary start year and then proceed until the present year.
+start_date = ymd("2005-01-01")
+end_date = floor_date(today(), unit="years")
+dates = seq(start_date, end_date, by="years")
+## Get the nearest Monday to Jan 1st to coincide with rankings release dates.
+dates = floor_date(dates, "week", week_start = getOption("lubridate.week.start", 1))
+dates
+
+# Next, I’ll write out a function that I’ll call rugby_scrape. This function will take a single argument: a date that it will
+# use to construct a new API endpoint during each iteration. Beyond that, it will pretty do much exactly the same things
+# that we did in our previous, manual data scrape.
+
+## First remove our existing variables. This is not really necessary, since R is smart enough
+## to distinguish named objects in functions from named objects in our global environment.
+## But I want to emphasise that we're creating new data here and avoid any confusion.
+rm(rugby, rankings, endpoint)
+
+## Now, create the function. I'll call it "rugby_scrape".
+rugby_scrape =
+  function(x) {
+    endpoint = paste0("https://api.wr-rims-prod.pulselive.com/rugby/v3/rankings/wru?language=en&date=", x)
+    rugby = fromJSON(endpoint)
+    rankings =
+      bind_cols(
+        rugby$entries$team,
+        rugby$entries %>% select(pts:previousPos)
+      ) %>%
+      clean_names() %>%
+      mutate(date = x) %>% ## New column to keep track of the date
+      select(-c(id, alt_id, annotations)) %>% ## These columns aren't adding much of interest
+      select(date, pos, pts, everything()) %>% ## Reorder remaining columns
+      as_tibble() ## "Enhanced" tidyverse version of a data frame
+    Sys.sleep(3) ## Be nice!
+    return(rankings)
+  }
+
+rankings_history =
+  lapply(dates, rugby_scrape) %>% ## Run the iteration
+  bind_rows() ## Bind the resulting list of data frames into a single data frame
+rankings_history
+
+# Okay! Let’s plot the data and highlight a select few countries in the process.
+
+teams = c("NZL", "RSA", "ENG", "JPN")
+team_cols = c("NZL"="black", "RSA"="#4DAF4A", "ENG"="#377EB8", "JPN" = "red")
+rankings_history %>%
+  ggplot(aes(x=date, y=pts, group=abbreviation)) +
+  geom_line(col = "grey") +
+  geom_line(
+    data = rankings_history %>% filter(abbreviation %in% teams),
+    aes(col=fct_reorder2(abbreviation, date, pts)),
+    lwd = 1
+  ) +
+  scale_color_manual(values = team_cols) +
+  labs(
+    x = "Date", y = "Points",
+    title = "International rugby rankings - Women", caption = "Source: World Rugby"
+  ) +
+  theme(legend.title = element_blank())
+
+
+
 
 
 

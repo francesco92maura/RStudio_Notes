@@ -167,7 +167,7 @@ fred_content %>%
 
 ### 1) Set an environment variable for the current R session only 
 # Set new environment variable called MY_API_KEY. Current session only.
-Sys.setenv(MY_API_KEY="e38117fdeb141bf80af8b4bae49a7d07") 
+Sys.setenv(MY_API_KEY="pu yout key here") 
 ## Assign the environment variable to an R object
 my_api_key = Sys.getenv("MY_API_KEY")
 ## Print it out just to show that it worked
